@@ -4,7 +4,7 @@
 
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=22&pause=1000&color=00F5A0&center=true&vCenter=true&width=850&lines=Building+a+Linux+Shell+Using+C;Understanding+Process+Management;fork()+%7C+exec()+%7C+wait();From+User+Command+to+Process+Execution;Exploring+Linux+System+Programming" alt="Animated Mini Shell heading"/>
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=22&pause=1000&color=00F5A0&center=true&vCenter=true&width=850&lines=Building+a+Linux+Shell+Using+C;Understanding+Process+Management;fork()+%7C+execvp()+%7C+wait();From+User+Command+to+Process+Execution;Exploring+Linux+System+Programming" alt="Animated Mini Shell heading"/>
 
 <br/>
 
@@ -23,138 +23,127 @@
 
 ### Building a Command-Line Interpreter from Scratch
 
-The Mini Shell Implementation is a command-line application developed using C programming in a Linux environment.
+The Mini Shell is a command-line application developed using C programming in a Linux environment.
 
-The project explores how a command-line shell interacts with the operating system to process user commands and execute programs.
+The project explores how a shell interacts with the Linux operating system to process user commands and execute external programs.
 
-Instead of depending entirely on an existing shell, this project focuses on understanding the underlying system programming concepts involved in command execution.
+The application demonstrates the fundamental mechanism behind command execution using process creation, program replacement and process synchronization.
 
-**Engineering objective:** Understand how Linux creates processes, executes programs and manages parent-child process relationships using system calls.
+Rather than depending entirely on an existing shell, this implementation focuses on understanding the system calls that make command execution possible.
 
-### Core Capabilities
-
-- Accept user commands through a terminal interface.
-- Process command input and arguments.
-- Create child processes using `fork()`.
-- Execute external programs using `exec()`.
-- Synchronize process execution using `wait()`.
-- Understand parent-child process relationships.
-
-*Additional shell features should be listed only when implemented in the actual source code.*
+**Engineering objective:** Develop practical knowledge of Linux process management and system-level programming using C.
 
 ---
 
-## `02 / SYSTEM ARCHITECTURE`
+## `02 / PROJECT ARCHITECTURE`
 
-### From User Input to Linux Process Execution
+### User-to-Kernel Interaction
 
 ```text
-       ┌──────────────────────┐
-       │      USER INPUT      │
-       │                      │
-       │      ls -l           │
-       └──────────┬───────────┘
-                  │
-                  ▼
-       ┌──────────────────────┐
-       │    MINI SHELL        │
-       │                      │
-       │   Read Command       │
-       │   Parse Arguments    │
-       └──────────┬───────────┘
-                  │
-                  ▼
-       ┌──────────────────────┐
-       │    PROCESS CREATION  │
-       │                      │
-       │       fork()         │
-       └──────────┬───────────┘
-                  │
-           ┌──────┴──────┐
-           │             │
-           ▼             ▼
-    ┌────────────┐  ┌────────────┐
-    │ PARENT     │  │ CHILD      │
-    │ PROCESS    │  │ PROCESS    │
-    │            │  │            │
-    │ wait()     │  │ exec()     │
-    │            │  │            │
-    └──────┬─────┘  └──────┬─────┘
-           │               │
-           │               ▼
-           │        ┌────────────┐
-           │        │ COMMAND    │
-           │        │ EXECUTION  │
-           │        └──────┬─────┘
-           │               │
-           └───────┬───────┘
-                   ▼
-          ┌──────────────────┐
-          │  RETURN TO SHELL │
-          │  NEXT COMMAND    │
-          └──────────────────┘
+           USER
+             |
+             | Enter command
+             ▼
+      ┌───────────────┐
+      │   MINI SHELL  │
+      │               │
+      │ Input Reading │
+      │ Command Parse │
+      └───────┬───────┘
+              |
+              ▼
+       ┌─────────────┐
+       │   fork()    │
+       │             │
+       │ Create Child│
+       └──────┬──────┘
+              |
+        ┌─────┴──────┐
+        |            |
+        ▼            ▼
+   ┌─────────┐  ┌──────────┐
+   │ PARENT  │  │  CHILD   │
+   │         │  │          │
+   │ wait()  │  │ execvp() │
+   │         │  │          │
+   └────┬────┘  └────┬─────┘
+        |            |
+        |            ▼
+        |      ┌────────────┐
+        |      │  PROGRAM   │
+        |      │ EXECUTION  │
+        |      └─────┬──────┘
+        |            |
+        └──────┬─────┘
+               |
+               ▼
+        NEXT SHELL PROMPT
 ```
+
+This architecture demonstrates the basic foreground command execution lifecycle.
 
 ---
 
 ## `03 / HOW THE MINI SHELL WORKS`
 
-### Understanding the Execution Lifecycle
+### The Complete Execution Journey
 
 **STEP 01 — COMMAND INPUT**
 
-The user enters a command through the terminal.
+The shell displays a prompt and waits for the user to enter a command.
 
 Example:
 
 ```bash
-ls -l
+minishell$ ls -l
 ```
 
-**STEP 02 — COMMAND PARSING**
+**STEP 02 — INPUT PROCESSING**
 
-The shell processes the input and separates the command from its arguments.
+The entered command is read and processed.
 
-Example:
+The shell separates the command name and its arguments.
 
 ```text
-Command:   ls
-Argument:  -l
+Command  : ls
+Argument : -l
 ```
 
 **STEP 03 — PROCESS CREATION**
 
 The `fork()` system call creates a child process.
 
-The parent and child continue execution in separate process contexts.
+The parent and child continue from the point where `fork()` returns, with different return values.
 
 **STEP 04 — PROGRAM EXECUTION**
 
-The child process uses an appropriate `exec()` family function to replace its process image with the requested program.
+The child process uses the `exec()` family, such as `execvp()`, to execute the requested external program.
+
+The child's previous process image is replaced by the new program.
 
 **STEP 05 — PROCESS SYNCHRONIZATION**
 
-The parent uses `wait()` or the implemented wait variant to collect the child's termination status and synchronize execution.
+The parent process uses `wait()` or the appropriate wait function to wait for the child process to terminate and collect its status.
 
-**STEP 06 — NEXT COMMAND**
+**STEP 06 — RETURN TO PROMPT**
 
-After the foreground command completes, the shell can return to the command prompt and accept another command.
+After foreground execution finishes, the shell continues its main loop and accepts the next command.
 
 ---
 
-## `04 / LINUX SYSTEM CALLS`
+## `04 / CORE LINUX SYSTEM CALLS`
 
-### The Core of Process Management
+### Understanding the Operating System Interface
 
-| System Call | Purpose | Application |
-|---|---|---|
-| `fork()` | Creates a child process | Process creation |
-| `exec()` family | Replaces the process image | Program execution |
-| `wait()` | Collects child process status | Synchronization |
-| `getpid()` | Retrieves process ID | Process identification |
-| `getppid()` | Retrieves parent process ID | Parent-child relationship |
+| System Call | Responsibility |
+|---|---|
+| `fork()` | Creates a child process |
+| `execvp()` | Executes a program using command and argument vector |
+| `wait()` | Waits for child process termination |
+| `getpid()` | Returns current process ID |
+| `getppid()` | Returns parent process ID |
 
-### Understanding fork()
+### Process Creation — fork()
 
 ```c
 pid_t pid = fork();
@@ -169,36 +158,36 @@ else if (pid > 0)
 }
 else
 {
-    // Fork failed
+    // Process creation failed
 }
 ```
 
-### Understanding exec()
+### Program Execution — execvp()
 
 ```c
 execvp(args[0], args);
 ```
 
-The `execvp()` function attempts to execute the requested program using the argument list.
+The `execvp()` function searches for the executable using the PATH environment variable and executes it with the supplied arguments.
 
-### Understanding wait()
+### Process Synchronization — wait()
 
 ```c
 wait(NULL);
 ```
 
-The parent process waits for a child process to terminate.
+The parent waits for a child process to terminate.
 
-*These are illustrative examples of the system calls used in Linux programming.*
+**Important:** `fork()` creates a process, `execvp()` replaces the current process image, and `wait()` synchronizes the parent with child termination.
 
 ---
 
-## `05 / PROCESS MANAGEMENT FLOW`
+## `05 / PARENT AND CHILD PROCESS MANAGEMENT`
 
-### Parent and Child Process Relationship
+### Two Processes, Two Responsibilities
 
 ```text
-              MINI SHELL
+             MINI SHELL
                   |
                   |
                 fork()
@@ -206,28 +195,39 @@ The parent process waits for a child process to terminate.
           ┌───────┴────────┐
           |                |
           ▼                ▼
-      PARENT             CHILD
+       PARENT             CHILD
           |                |
-          |              exec()
+          |              execvp()
           |                |
           |                ▼
-          |         EXTERNAL PROGRAM
+          |          NEW PROGRAM
           |                |
         wait()             |
           |                |
           └───────┬────────┘
                   |
                   ▼
-           SHELL CONTINUES
+          SHELL CONTINUES
 ```
 
-**Important concept:** `fork()` creates a new process, while `exec()` replaces the calling process image with another program. They perform different responsibilities.
+### Parent Process
+
+- Maintains the shell execution loop.
+- Creates child processes.
+- Waits for foreground child processes.
+- Continues accepting user commands.
+
+### Child Process
+
+- Receives the command and arguments through the inherited process memory.
+- Executes the requested program using an `exec()` function.
+- Reports execution failure if the `exec()` call returns.
 
 ---
 
 ## `06 / COMMAND EXECUTION EXAMPLE`
 
-### What Happens When You Enter a Command?
+### What Happens Behind a Simple Command?
 
 User enters:
 
@@ -235,34 +235,34 @@ User enters:
 pwd
 ```
 
-The Mini Shell:
+The Mini Shell processes the request:
 
-1. Reads the command.
-2. Identifies the command name.
-3. Creates a child process.
-4. Executes the `pwd` program in the child.
-5. Waits for the child to finish.
-6. Displays the next shell prompt.
+1. Reads `pwd` from user input.
+2. Processes the command name.
+3. Creates a child process using `fork()`.
+4. Executes the `pwd` program using an appropriate `exec()` function.
+5. Parent waits for the child to finish.
+6. Shell returns to the next prompt.
 
-Expected command output:
+Example output:
 
 ```text
-/home/user/project
+/home/user/projects
 ```
 
-*The displayed path is an example; actual output depends on the working directory.*
+The actual output depends on the current working directory.
 
 ---
 
-## `07 / TECHNICAL CONCEPTS**
+## `07 / TECHNICAL CONCEPTS`
 
 | Concept | Practical Application |
 |---|---|
 | Process Creation | Creating child processes |
-| Process Execution | Running external commands |
+| Process Execution | Executing external programs |
 | Parent-Child Relationship | Understanding process hierarchy |
-| Process Synchronization | Waiting for process completion |
-| System Calls | Interacting with the Linux kernel |
+| Process Synchronization | Waiting for child completion |
+| System Calls | Interacting with the operating system |
 | Command Parsing | Processing user input |
 | C Programming | Implementing shell logic |
 
@@ -275,7 +275,7 @@ Expected command output:
 | Programming Language | C |
 | Operating System | Linux |
 | Compiler | GCC |
-| System Interface | Linux system calls |
+| System Interface | POSIX/Linux system calls |
 | Development Domain | Linux System Programming |
 
 ---
@@ -294,7 +294,7 @@ Mini-Shell-Implementation/
 └── .gitignore
 ```
 
-*Illustrative structure. Keep the repository synchronized with your actual source files.*
+*Illustrative structure. Update it to match the actual source files in the repository.*
 
 ---
 
@@ -302,9 +302,9 @@ Mini-Shell-Implementation/
 
 ### Prerequisites
 
-- Linux operating system or Linux environment.
-- GCC compiler.
-- Basic C programming knowledge.
+- Linux environment
+- GCC compiler
+- Basic C programming knowledge
 
 ### Compilation
 
@@ -321,62 +321,3 @@ gcc *.c -o minishell
 ```
 
 ### Execution
-
-```bash
-./minishell
-```
-
-Enter supported commands at the shell prompt to test command execution.
-
----
-
-## `11 / ENGINEERING SKILLS DEVELOPED`
-
-- Linux system programming fundamentals.
-- Process creation and execution.
-- Parent-child process management.
-- System call understanding.
-- Command-line application development.
-- C programming and debugging.
-- Process synchronization.
-- Operating system fundamentals.
-
----
-
-## `12 / FUTURE ENHANCEMENTS`
-
-- [ ] Add command history.
-- [ ] Improve command parsing.
-- [ ] Add input and output redirection.
-- [ ] Implement pipe support.
-- [ ] Add background process execution.
-- [ ] Improve signal handling.
-- [ ] Add robust error handling.
-
----
-
-## `13 / ABOUT THE DEVELOPER`
-
-<div align="center">
-
-### PURUSHOTHAMA K
-
-**Embedded C | Linux Programming | Embedded Software Development**
-
-Electrical and Electronics Engineering Graduate
-
-Interested in Embedded Systems, Linux Internals, System Programming and Firmware Development.
-
-[![GitHub](https://img.shields.io/badge/GitHub-My%20Profile-181717?style=for-the-badge&logo=github)](https://github.com/kpurushothama446-droid)
-
-</div>
-
----
-
-<div align="center">
-
-### UNDERSTAND THE KERNEL. MANAGE THE PROCESS. BUILD THE SYSTEM.
-
-**DESIGN | DEVELOP | DEBUG**
-
-</div>
